@@ -1,0 +1,7 @@
+{
+  "title": "P1 checkout 500s: TypeError in pricing.total on every order with 2+ lines",
+  "stack": "TypeError: Cannot read properties of undefined (reading 'price') at total (pricing.js)",
+  "endpoint": "POST /api/checkout",
+  "fixtureDir": "fixture",
+  "testScript": "run.js"
+}
