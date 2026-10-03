@@ -6,6 +6,17 @@
 <label>Alert title<input id="t" value="P1 checkout 500s: TypeError in pricing.total"></label>
 <label>Stack trace<textarea id="s" rows="3">TypeError: Cannot read properties of undefined (reading 'price') at total (pricing.js)</textarea></label>
 <pre id="o">Press "Run loop"...</pre>
+<h2>Validated on a real bug — verify it yourself</h2>
+<p>On Oct 3, Nightcall (live Nemotron) fixed a real bug in <a href="https://github.com/sindresorhus/escape-string-regexp">sindresorhus/escape-string-regexp</a> at commit <code>d248d82</code> (pre-fix). Its patch was <strong>byte-identical</strong> to the upstream fix <a href="https://github.com/sindresorhus/escape-string-regexp/commit/ec45c70">ec45c70</a> (same blob hashes <code>e5bb9db..387c561</code>):</p>
+<pre>-		.replace(/-/g, '\\u002d');
++		.replace(/-/g, '\\x2d');</pre>
+<p>Reproduce it:</p>
+<pre>git clone https://github.com/sindresorhus/escape-string-regexp.git realbug
+git -C realbug checkout ec45c70^
+# add a repro asserting escapeStringRegexp('foo - bar') === 'foo \\x2d bar' (fails red)
+NEBIUS_API_KEY=... node dist/src/index.js --alert alert-real.json
+git -C realbug diff   # compare with ec45c70 -- index.js</pre>
+<p>Live run: <code>mode=nemotron</code>, models <code>Nano-30B</code> (triage P1) + <code>Ultra-550B</code> (exact patch), <code>fixed:true</code>.</p>
 <p><small>Repo: <a href="https://github.com/AliceMessi/nightcall">github.com/AliceMessi/nightcall</a></small></p>
 <script>
 const BUGGY="for (let i = 0; i <= items.length; i++)";
