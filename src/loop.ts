@@ -103,22 +103,33 @@ export async function runLoop(alert: Alert): Promise<LoopResult> {
   let diagnosis: Diagnosis;
   let mode: LoopResult["mode"] = triageMode;
   if (live && reproduced) {
+    // Ultra reasons; Nano retries if Ultra rambles; fixture fallback only for our fixture.
+    const diagPrompt = (code: string) => [
+      { role: "system", content: DIAG_SYSTEM } as const,
+      {
+        role: "user",
+        content: JSON.stringify({
+          alert: alert.title,
+          stack: alert.stack ?? "",
+          log: repro.log.slice(0, 2000),
+          code: code.slice(0, 2000),
+        }),
+      } as const,
+    ];
     try {
-      const file = path.join(path.resolve(alert.fixtureDir), "pricing.js");
+      const files = fs.readdirSync(path.resolve(alert.fixtureDir));
+      const target = files.includes("pricing.js") ? "pricing.js" : files.find((f) => f.endsWith(".js") && f !== "run.js" && !f.startsWith("nightcall-")) ?? "pricing.js";
+      const file = path.join(path.resolve(alert.fixtureDir), target);
       const code = fs.readFileSync(file, "utf8");
-      const { text, model } = await callNemotron(
-        [
-          { role: "system", content: DIAG_SYSTEM },
-          {
-            role: "user",
-            content: JSON.stringify({ alert: alert.title, stack: alert.stack ?? "", log: repro.log.slice(0, 2000), code: code.slice(0, 2000) }),
-          },
-        ],
-        "reasoning",
-        { maxTokens: 800 }
-      );
-      models.push(model);
-      const d = parseJson<Diagnosis>(text);
+      let raw: { text: string; model: string };
+      try {
+        raw = await callNemotron(diagPrompt(code), "reasoning", { maxTokens: 1500, json: true });
+      } catch {
+        raw = await callNemotron(diagPrompt(code), "triage", { maxTokens: 800, json: true });
+      }
+      models.push(raw.model);
+      const d = parseJson<Diagnosis>(raw.text);
+      if (!code.includes(d.oldText)) throw new Error("Patch target not found in file");
       diagnosis = { ...d, file };
     } catch {
       mode = "heuristic-fallback";

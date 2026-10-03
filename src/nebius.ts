@@ -20,7 +20,7 @@ export function modelFor(tier: Tier, override?: string): string {
 export async function callNemotron(
   messages: ChatMessage[],
   tier: Tier = "triage",
-  opts: { model?: string; baseUrl?: string; apiKey?: string; maxTokens?: number } = {}
+  opts: { model?: string; baseUrl?: string; apiKey?: string; maxTokens?: number; json?: boolean } = {}
 ): Promise<{ text: string; model: string }> {
   const apiKey = opts.apiKey ?? process.env.NEBIUS_API_KEY ?? "";
   if (!apiKey) throw new Error("Missing NEBIUS_API_KEY");
@@ -36,6 +36,7 @@ export async function callNemotron(
       messages,
       temperature: 0.2,
       max_tokens: opts.maxTokens ?? 800,
+      ...(opts.json ? { response_format: { type: "json_object" } } : {}),
     }),
   });
   if (!res.ok) throw new Error(`Nebius error ${res.status}`);
